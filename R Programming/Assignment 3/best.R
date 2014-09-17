@@ -14,5 +14,5 @@ best<-function (state, outcome) {
   }
   # Assign the 'character' outcome values to numerics
   hospitals[,outcome_name]<-as.numeric(hospitals[,outcome_name])
-  hospitals[order(hospitals[,outcome_name], decreasing=FALSE),c("Hospital.Name",outcome_name)]
+  hospitals[order(hospitals[,outcome_name], decreasing=FALSE),c("Hospital.Name",outcome_name)][[1, "Hospital.Name"]]
 }
