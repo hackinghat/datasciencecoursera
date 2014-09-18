@@ -14,14 +14,14 @@ rankhospital<-function(state, outcome, num = "best") {
   # Assign the 'character' outcome values to numerics
   hospitals[,outcome_name]<-as.numeric(hospitals[,outcome_name])
   rank<-if (num == "best") 1 else 
-        if (num == "worst") length(hospitals) else
+        if (num == "worst") nrow(hospitals) else
 	  if (class(num) == "numeric") num 
         else stop("invalid num")
   # We asked for a rank that didn't exist
-  if (num > nrow(hospitals)) 
+  if (rank > nrow(hospitals)) 
 	NA
   else
-	hospitals[order(hospitals[,outcome_name], decreasing=FALSE),c("Hospital.Name",outcome_name)][num,1]
+	hospitals[order(hospitals[,outcome_name], decreasing=FALSE),c("Hospital.Name",outcome_name)][rank, 1]
 }
 
 
