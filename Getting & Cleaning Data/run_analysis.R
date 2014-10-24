@@ -1,16 +1,16 @@
+# run_analysis.R - UCI HAR Data Extractor
+# Author: steve@hackinghat.com
+#
 # Read a folder of the form 
 #
 #     |- <folder> -- |-- X_<folder>.txt
 #     |              |-- y_<folder>.text
 #                    --- subject_<folder>.txt
 # 
-#  Into a data.frame of the form:
-#    
-#     subject y 
 readfolder<-function(folder, nrows, features) {
   vars<-list("subject", "y", "X")
   result<-do.call(cbind, lapply (vars, function(file) {
-    read.table(file.path(folder, paste(file, "_", folder, ".txt", sep="")), sep="", comment.char="")
+    read.table(file.path(folder, paste(file, "_", folder, ".txt", sep="")), sep="", comment.char="", nrows=nrows)
   }))
   # Add the column names back
   names(result)<-append(vars[1:2], features)
