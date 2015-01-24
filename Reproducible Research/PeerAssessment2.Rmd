@@ -1,0 +1,124 @@
+---
+title: "Socio-economic effects of adverse weather in the United States"
+author: "Steve Knight"
+date: "Monday, January 19, 2015"
+output: 
+  html_document:
+    keep_md: true
+---
+
+# Synopsis
+
+Based on publically available data we determine the social and economic cost of storm events in the USA.   This is to determine which events result in the most injuries and which result in the most economic cost.
+
+# Data Processing
+
+The data used in this study comes from the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database. This database tracks characteristics of major storms and weather events in the United States.
+
+```{r cache=TRUE}
+storm_raw<-read.csv("repdata%2Fdata%2FStormData.csv.bz2")
+# Tidy up the column names so they're lower case and have no silly underscores
+names(storm_raw)<-sub("._", "", sub("_", ".", tolower(names(storm_raw))))
+# Compute the range of the collection times
+year_range<-range(strptime( storm_raw$bgn.date, format="%m/%d/%Y %H:%M:%S"))
+```
+The data has been collected over a period of approximately `r as.integer(round((year_range[2]-year_range[1])/365))` years and consists of `r nrow(storm_raw)` storm event entries.   During this time the classification of some of the events has not been entirely consistent.   The data set consists of `r length(unique(storm_raw$evtype))` different recorded event types and many of those event types are over-lapping, misspelled or non-sensical without proper context.    
+
+To this end those event types were necessarily re-classified into a subset for better understanding of the data.   Without specific guidance as to how this classification should be done it was largely a case of classifying according to a set of rules.
+
+By the admission of the NOAA some events, such as Hurricane Katrina, are difficult to categorize due to the multiple observed weather phenomena.  
+
+Injuries & fatalities recorded in the data are those that can be attributed directly, indirectly attributed injuries are not included as these would be difficult to differentiate from other factors.
+
+
+```{r cache=TRUE}
+# Clean up the event type field into something more useful
+clean_types<-storm_raw$evtype
+for (x in list(c(".*WI*ND.*", "wind"), 
+               c("Summary", NA), 
+               c(".*hail.*", "hail"),
+               c(".*snow.*", "snow"),
+               c(".*(floo*d|Fld).*", "flood"),
+               c(".*(rain|precip|drizzle|wet|shower).*", "rain"),
+               c(".*(mix|sleet|winter).*", "sleet"),
+               c(".*(dr[yi]|drou).*", "drought"),
+               c(".*(surf|tide|current|rising water).*", "tide"),
+               c(".*avalanc.*", "avalanche"),
+               c(".*frost.*", "frost"),
+               c(".*([fv]og|cloud).*", "fog"),
+               c(".*volcan.*", "volcano"),
+               c(".*lig[hn]t.*", "lightning"),
+               c(".*ic[ey].*", "ice"),
+               c(".*(blizzard|storm|typhoon|cyclone|tstm|hurricane|floyd|burst|depress).*", "storm"),
+               c(".*(nado|torndao|spout|funnel|dev[ie]l).*", "tornado"),
+               c(".*(dust).*", "dust"),
+               c(".*(fire).*", "fire"),
+               c(".*(tsunami|wave|surge|seiche).*", "wave"),
+               c(".*(seas|swell).*", "swell"),
+               c(".*(smoke).*", "smoke"),
+               c(".*(erosio*n|slide|slump).*", "erosion"),
+               c(".*(cold|cool|freez|low).*", "cold"),
+               c(".*(warm|hot|heat|record).*", "heat"),
+               c(".*(dam).*", "dam"),
+               c(".*(southeast|turb|month|excessive|glaze|pattern|small stream|weather|hyper|flag|apache|none|other|urban|high|drown|marine|\\?).*", "other"))) {
+  clean_types<-sub(x[[1]], x[[2]], clean_types, ignore.case=TRUE)
+}
+storm_raw$type<-as.factor(clean_types)
+```
+# Results
+
+## Most injurious adverse weather events
+
+There are two levels of human health effects recorded in the NOAA data: fatalities & injuries.   Using the re-classified NOAA event types the data can be transformed to show which types of event are most injurious.
+
+```{r}
+# Calculate injur and fatality vectors
+injuries<-tapply(storm_raw$injuries, storm_raw$type, FUN=sum)
+fatalities<-tapply(storm_raw$fatalities, storm_raw$type, FUN=sum)
+# Construct a data frame of casualties
+casualties<-data.frame(casualties=c(fatalities, injuries), 
+                       severity=as.factor(c(rep("fatalities", length(fatalities)), rep("injuries", length(injuries)))), 
+                       type=factor(c(names(fatalities), names(injuries)), levels=names(sort(fatalities))))
+library(lattice)
+barchart(type~casualties|severity, data=casualties, 
+         scales=list(x=list(log=T)), 
+         ylab="Weather Event", 
+         xlab="Casualties",
+         main="Injuries directly resulting from adverse weather in the US")
+```
+
+From the above figure it can be seen that tornados, excessive heat and flooding account for the most fatalities but that wind causes slightly more injury.
+
+## Most costly adverse weather events
+
+There are two levels of economic effects recorded in the NOAA data: property damage & crop damage.   Using the re-classified NOAA event types the data can be transformed to show which types of event are most costly.
+
+
+```{r}
+# Calculate injur and fatality vectors
+crop<-tapply(storm_raw$cropdmg, storm_raw$type, FUN=sum)
+prop<-tapply(storm_raw$propdmg, storm_raw$type, FUN=sum)
+# Construct a data frame plus a total column
+damage<-data.frame(damage=c(crop, prop, crop+prop), 
+                       damagetype=as.factor(c(rep("crop", length(crop)), rep("property", length(prop)), rep("total", length(prop)))), 
+                       event=factor(c(names(crop), names(prop), names(prop)), levels=names(sort(crop+prop))))
+# Output the chart
+library(lattice)
+barchart(event~damage|damagetype, data=damage[damage$damagetype=="crop"|damage$damagetype=="property",], 
+         scales=list(x=list(log=T)), 
+         ylab="Weather Event", 
+         xlab="Damage (USD)",
+         main="Damage cost directly resulting from adverse weather in the US")
+```
+
+From the chart above it can be seen that the most property damage is caused by tornados and wind, however the most crop damage is provided by hail.
+
+```{r}
+barchart(event~damage|damagetype, data=damage[damage$damagetype=="total",], 
+         scales=list(x=list(log=T)), 
+         ylab="Weather Event", 
+         xlab="Total Damage (USD)",
+         main="Total cost directly resulting from adverse weather in the US")
+```
+
+When the costs are combined it can be seen that the mostly costly economic weather events are also the most injurious.
