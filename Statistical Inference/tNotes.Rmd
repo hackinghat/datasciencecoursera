@@ -1,0 +1,35 @@
+## t-Confidence Interval
+
+c<-0.95  #% confidence interval
+n<-9 # number of samples
+s<-30 # sample s.d.
+e<-qt(c, df=n-1)*s/sqrt(n)
+mu+c(-1, 1)*e
+
+ 
+## t-Confidence Interval (independent groups, constant variances)
+
+c<-0.05 # will be 95%
+nx<-10 # number of x obs
+ny<-10 # number of y obs
+xbar<-5 # mean of x
+ybar<-3 # mean of y
+Sy<-sqrt(0.68) # s.d. of y (var = 0.68)
+Sx<-sqrt(0.60) # s.d. of x (var = 0.6)
+Sp = (((nx-1)*Sx^2+(ny-1)*Sy^2) / (nx + ny -2))^0.5 # weighted average of variances
+xbar-ybar+c(-1,1)*qt(1-c/2, nx+ny-2, 1-c/2)*Sp(1/nx+1/ny)^0.5
+
+
+## t-Confidence Interval (independent groups, unequal variances)
+
+```{r}
+tdf<-function(sx2,nx,sy2,ny) {
+   ((sx2/nx+sy2/ny)^2)/((sx2/nx)^2/(nx-1)+(sy2/ny)^2/(ny-1))
+}
+
+tconf<-function(a,mux,sx,nx,muy,sy,ny) {
+    mux-muy+c(-1,1)*qt(1-a/2,tdf(sx^2,nx,sy^2,ny))*(sx^2/nx+sy^2/ny)^0.5
+}
+```
+
+

@@ -1,0 +1,91 @@
+---
+title: "Guinea Pig Tooth Growth Analysis"
+author: "Steve Knight"
+date: "22/02/2015"
+output: pdf_document
+---
+
+The ToothGrowth data in R is a table of the length of odontoblasts (teeth) in each of 10 guinea pigs at each of three dose levels of Vitamin C (0.5, 1, and 2 mg) with each of two delivery methods orange juice (OJ) or ascorbic acid (VC).
+
+```{r, warning=FALSE, echo=FALSE, message=FALSE}
+library(datasets)
+library(ggplot2)
+require(grahics)
+```
+
+## Summary of the data
+
+The data consists of length measurements conditioned on 2 different factors: dose & supplement.   Three different doses are supplied (0.5, 1.0 & 2.0) and two different supplements were used: orange juice (OJ) and ascorbic acid (VC).
+
+Looking at the following plot it can be seen that at lower dosages (0.5 & 1.0) the orange juice (OJ) supplement appears to produce better outcomes than the Vitamin C (VC) supplement.
+
+Whereas at higher dosages it would appear as if the average outcome is the same but the variability in the second outcome is higher.   In all cases it would appear that a higher dosage yields greater tooth growth.
+
+```{r}
+coplot(len ~ dose | supp, data = ToothGrowth, panel = panel.smooth,
+      xlab = "ToothGrowth data: length vs dose, given type of supplement")
+```
+
+
+Looking at the average tooth length by supplement and dose supports the earlier observation that OJ appears more effective at lower dosages.
+
+```{r}
+aggregate(ToothGrowth$len, list(Dose=ToothGrowth$dose, Supp=ToothGrowth$supp), sd)
+```
+
+Looking at the variances/standard deviations of the groups also supports the graphical evidence that whilst higher dosages have similar outcomes they have a higher level of dispersion.   Finally,  it is not clear that the distributions have the same variance either within or between supplements.
+
+```{r}
+aggregate(ToothGrowth$len, list(Dose=ToothGrowth$dose, Supp=ToothGrowth$supp), sd)
+```
+
+Finally to simplify analysis it can be seen that there are ten samples per dose and supplement.
+
+```{r}
+aggregate(ToothGrowth$len, list(Dose=ToothGrowth$dose, Supp=ToothGrowth$supp), length)
+n<-10
+```
+
+
+## Statistical tests
+
+Based on the empirical evidence above, it is assumed that the data has come from independent groups with unequal variances.
+
+
+```{r}
+# Returns the 1-'a'/2 t-distribution confidence interval for independent groups with unequal variances
+tconf<-function(a,mux,sx,nx,muy,sy,ny) {
+    tdf<-function(sx2,nx,sy2,ny) {
+      ((sx2/nx+sy2/ny)^2)/((sx2/nx)^2/(nx-1)+(sy2/ny)^2/(ny-1))
+    }
+    muy-mux+c(-1,1)*qt(1-a/2,tdf(sx^2,nx,sy^2,ny))*(sx^2/nx+sy^2/ny)^0.5
+}
+```
+
+We use the above confidence interval calculation (tconf) to compare the low (0.5) dosage to the higher (2.0) dosage for each supplement, to determine whether a higher dosage of a supplement is beneficial.
+
+In both cases (below) it can be seen that since the 95% confidence intervals of both OJ & VC do not cross zero (and the means are increasing) that an increased dosage is indeed beneficial for tooth growth.
+
+```{r}
+# OJ
+tconf(0.05, 13.23, 4.459709, 10, 26.06, 2.655058, 10)
+# VC
+tconf(0.05, 7.98, 2.746634, 10, 26.14, 4.797731, 10)
+```
+
+We then examine the confidence interval from fixing the dosage (and repeat for the two lower dosages) we can see that neither of these intervals cross zero and since both are negative suggest that the orange juice is a better supplement at lower dosage.
+
+```{r}
+# OJ vs VC at dosage 0.5 & 1.0
+tconf(0.05, 13.23, 4.459709, 10, 7.98, 2.746634, 10)
+tconf(0.05, 22.7, 3.910953, 10, 16.77, 2.515309, 10)
+```
+
+Finally it can be seen that in the case of the higher dosages that since the 95% confidence interval crosses zero that the benefits of one supplement can not be easily distinguished from the other.
+
+```{r}
+# OJ vs VC at dosage 2.0
+tconf(0.05, 26.06, 2.655058, 10, 26.14, 4.797731, 10)
+```
+
+

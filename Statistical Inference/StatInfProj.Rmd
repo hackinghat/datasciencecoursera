@@ -1,0 +1,94 @@
+---
+title: "Investigating the Exponential Distribution and the Central Limit Theorem"
+author: "Steve Knight"
+date: "Friday, February 20, 2015"
+output: pdf_document
+---
+
+## Overview
+
+Here we aim to show how sampling from a non-normal distribution yields averages that are normal, but variances that are non-normal.   We do this by performing a series of experiments using progressively larger sample sizes to show that as the sample sizes approach infinity then the distribution of averages approaches the normal distribution.   The variances initially appear to be also normal, but as the sample size increases they appear not normal.
+
+## Simulations
+
+```{r, cache=TRUE}
+require(ggplot2)
+set.seed(0)
+lambda = 0.2
+Emu = 1/lambda
+Esd = 1/lambda
+n = 40
+simulation = data.frame()
+for (i in c(100, 1000, 10000))
+  for (j in 1:i) {
+    sample<-rexp(n, rate=lambda)
+    simulation<-rbind(simulation, list(n=i, mu=mean(sample), sd=sd(sample)))
+  }
+simulation$n<-as.factor(simulation$n)
+```
+
+3 different experiments were run where the number of simulations of samples (size = `r n`) is: 100, 1000, 10000.   
+
+For each sample we record the number of simulations it was run for (we will use this as a factor for display later), the mean of the sample and the standard deviation of the sample. 
+
+## Sample Mean versus Theoretical Mean
+
+The theoretical mean of an exponential distribution is 1/lambda, therefore for our simulations the expected mean is `r Emu`.   
+
+We then plot a density histogram for each simulation run (100, 1000, 10000) so that we can see how this affects the mean.   The theoretical mean is plotted on the histograms as a thin black vertical line on the plots.
+
+If we plot the density of the three different simulations we can see that the mean is being progressively refined and after 10,000 simulations does indeed appear to be normal.
+
+```{r, warning=FALSE}
+require(ggplot2)
+ggplot(simulation, aes(x=mu)) + 
+  ggtitle("Sample means over increasing sample sizes") +
+  geom_vline(aes(xintercept=Emu)) +
+  geom_bar(aes(y=..density..,fill=n),binwidth=0.1) + 
+  facet_grid(n~.)
+```
+
+## Sample Variance versus Theoretical Variance
+
+The theoretical variance of an exponential distribution is also 1/lambda, therefore for our simulations the expected variance is also `r Esd`.   
+
+We then plot a density histogram for each simulation run (100, 1000, 10000) so that we can see how this affects the variance.   The theoretical variance is plotted on the histograms as a thin black line on the plots.
+
+```{r, warning=FALSE}
+require(ggplot2)
+ggplot(simulation, aes(x=sd)) + 
+  ggtitle("Sample standard deviations over increasing sample sizes") +
+  geom_vline(aes(xintercept=Esd)) +
+  geom_bar(aes(y=..density..,fill=n),binwidth=0.1) + 
+  facet_grid(n~.)
+```
+
+It can be seen from the plots that as the sample size increases that the standard deviation, and hence variance, decreases.   It should also be noted that as the sample size begins to approach the population size (which in this case is infinite) that it appears as if the distribution is no longer centred around the expected value of `r Esd`.   This is unlike the results of the mean experiments where the centre appeared at the expected value.
+
+One explanation for this is that as the sample size increases the variance becomes less random and hence no longer appears to be normally distributed.
+
+## Distribution
+
+A back-of-the envelope calculation can be used to demonstrate that the distribution of means is approximately normal.   We do this by employing the so-called 68–95–99.7 rule to show that 68% of the largest sample size fall within 1 sigma of the mean, 95% fall within 2 sigmas and 99.7 fall within 3 sigmas.
+
+```{r}
+pct_in_range<-function(lst, lower, upper) {
+  sum(lst>=lower & lst<=upper)/length(lst)*100.0
+}
+large_sample<-subset(simulation, n==10000)
+sample_mu_sd<-sd(large_sample$mu)
+sample_sd_sd<-sd(large_sample$sd)
+```
+
+It would appear that the 68-95-99.7 rule does indeed follow for the averages as can be seen by the following R code:
+
+```{r}
+sapply(c(1, 2, 3), function(x) pct_in_range(large_sample$mu, Emu-(sample_mu_sd*x), Emu+(sample_mu_sd*x)))
+```
+
+However, as previously mentioned the rule does not seem to follow for the standard deviations/variances with the following R results:
+
+```{r}
+sapply(c(1, 2, 3), function(x) pct_in_range(large_sample$mu, Esd-(sample_sd_sd*x), Emu+(sample_sd_sd*x)))
+```
+
